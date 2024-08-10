@@ -18,6 +18,12 @@ internal class Program
                     m.AddRider(r =>
                     {
                         r.AddConsumer<OrderConsumer>();
+                        r.AddConsumer<OrderRetryConsumer>(c => c.UseMessageRetry(ur =>
+                        {
+                            ur.Handle<OrderRetryException>();
+                            ur.Handle<OrderRetryDelayException>();
+                            ur.Interval(2, 120000);
+                        }));
                         r.UsingKafka((context, config) =>
                         {
                             config.Host("localhost:9094");
@@ -25,6 +31,11 @@ internal class Program
                             {
                                 e.ConfigureConsumer<OrderConsumer>(context);
                             });
+                            config.TopicEndpoint<OrderMessage>("topic-primary-retry", "consumer-primary", e =>
+                            {
+                                e.ConfigureConsumer<OrderRetryConsumer>(context);
+                            });
+
                         });
 
                     });
